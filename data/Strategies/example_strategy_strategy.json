@@ -1,0 +1,38 @@
+{
+    "name": "Example RSI Crossover",
+    "goal": "Buy when RSI is oversold, Sell when RSI is overbought.",
+    "timeframe_id": "1h",
+    "required_indicators": [
+        {
+            "name": "RSI",
+            "parameters": {
+                "period": 14
+            }
+        }
+    ],
+    "entry_conditions": [
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "RSI_14",
+                "threshold": 30,
+                "operator": "<"
+            }
+        }
+    ],
+    "exit_conditions": [
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "RSI_14",
+                "threshold": 70,
+                "operator": ">"
+            }
+        }
+    ],
+    "filters": [],
+    "risk_params": {
+        "stop_loss_pct": 2.0,
+        "take_profit_ratio": 1.5
+    }
+}

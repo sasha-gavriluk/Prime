@@ -1,0 +1,43 @@
+{
+    "name": "Bollinger Breakout",
+    "goal": "Enter on price breakout above upper Bollinger Band and exit on return below middle band.",
+    "entry_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "close",
+                    []
+                ],
+                "source_2": [
+                    "Bollinger_Upper",
+                    [
+                        20,
+                        2
+                    ]
+                ],
+                "direction": "above"
+            }
+        }
+    ],
+    "exit_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "close",
+                    []
+                ],
+                "source_2": [
+                    "Bollinger_Middle",
+                    [
+                        20
+                    ]
+                ],
+                "direction": "below"
+            }
+        }
+    ],
+    "filters": [],
+    "risk_params": {}
+}

@@ -1,0 +1,114 @@
+{
+  "button_primary": {
+    "background_color": "#50C878",
+    "background_normal": "",
+    "font_size": "15sp",
+    "color": "#FFFFFF"
+  },
+  "button_secondary": {
+    "background_color": "#3A3E41",
+    "background_normal": "",
+    "font_size": "14sp",
+    "color": "#F0F0F0"
+  },
+  "button_back": {
+    "background_color": "#3A3E41",
+    "background_normal": "",
+    "size_hint": [null, null],
+    "width": 95
+  },
+  "label_header": {
+    "font_size": "16sp",
+    "bold": true,
+    "halign": "center",
+    "color": "#F0F0F0"
+  },
+  "text_input_main": {
+    "background_color": "#1E2022",
+    "foreground_color": "#F0F0F0",
+    "padding": [5.5, 5.5, 5.5, 5.5]
+  },
+  "button_settings": {
+    "background_color": "#3A3E41",
+    "background_normal": "",
+    "font_size": "14sp",
+    "color": "#F0F0F0"
+  },
+  "button_clear_info": {
+    "background_color": "#3A3E41",
+    "background_normal": "",
+    "font_size": "14sp",
+    "color": "#F0F0F0"
+  },
+  "button_load_data": {
+    "background_color": "#50C878",
+    "background_normal": "",
+    "font_size": "15sp",
+    "color": "#FFFFFF"
+  },
+  "button_process_data": {
+    "background_color": "#50C878",
+    "background_normal": "",
+    "font_size": "15sp",
+    "color": "#FFFFFF"
+  },
+  "button_get_signal": {
+    "background_color": "#50C878",
+    "background_normal": "",
+    "font_size": "15sp",
+    "color": "#FFFFFF"
+  },
+  "button_history": {
+    "background_color": "#3A3E41",
+    "background_normal": "",
+    "font_size": "14sp",
+    "color": "#F0F0F0"
+  },
+  "info_box": {
+    "background_color": "#1E2022",
+    "foreground_color": "#D0D0D0",
+    "font_name": "RobotoMono-Regular",
+    "padding": [15, 15, 15, 15],
+    "font_size": "13sp"
+  },
+  "// --- NEON NOIR THEME --- //": {},
+  "background_noir": {
+    "canvas.before": {
+      "Color": { "rgba": [0.07, 0.07, 0.07, 1] },
+      "Rectangle": { "size": ["self.size"], "pos": ["self.pos"] }
+    }
+  },
+  "label_noir": {
+    "font_size": "16sp",
+    "color": "#E0E0E0"
+  },
+  "button_buy_noir": {
+    "background_color": "#002000",
+    "background_normal": "",
+    "color": "#00FF00",
+    "bold": true
+  },
+  "button_sell_noir": {
+    "background_color": "#200000",
+    "background_normal": "",
+    "color": "#FF0000",
+    "bold": true
+  },
+  "button_action_noir": {
+    "background_color": "#1E1E1E",
+    "background_normal": "",
+    "color": "#E0E0E0"
+  },
+  "text_input_noir": {
+    "background_color": "#1E1E1E",
+    "foreground_color": "#E0E0E0",
+    "cursor_color": "#00FF00"
+  },
+  "info_box_noir": {
+    "background_color": "#101010",
+    "foreground_color": "#00FF00",
+    "font_name": "RobotoMono-Regular",
+    "padding": [15, 15, 15, 15],
+    "font_size": "13sp"
+  }
+}

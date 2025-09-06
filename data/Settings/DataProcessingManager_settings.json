@@ -1,0 +1,125 @@
+{
+    "DataProcessingManager": {
+        "indicators": [
+            {
+                "name": "SMA",
+                "parameters": {
+                    "period": 20
+                }
+            },
+            {
+                "name": "EMA",
+                "parameters": {
+                    "period": 50
+                }
+            },
+            {
+                "name": "RSI",
+                "parameters": {
+                    "period": 14
+                }
+            },
+            {
+                "name": "MACD",
+                "parameters": {
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9
+                }
+            },
+            {
+                "name": "ATR",
+                "parameters": {
+                    "period": 14
+                }
+            },
+            {
+                "name": "Bollinger_Bands",
+                "parameters": {
+                    "period": 20,
+                    "std_multiplier": 2
+                }
+            },
+            {
+                "name": "ADX",
+                "parameters": {
+                    "period": 14
+                }
+            },
+            {
+                "name": "Stochastic",
+                "parameters": {
+                    "k_period": 14,
+                    "d_period": 3
+                }
+            },
+            {
+                "name": "CCI",
+                "parameters": {
+                    "period": 20
+                }
+            },
+            {
+                "name": "Volume_Avg",
+                "parameters": {
+                    "period": 20
+                }
+            },
+            {
+                "name": "Keltner_Channel",
+                "parameters": {
+                    "period": 20,
+                    "multiplier": 2
+                }
+            },
+            {
+                "name": "SMA_Cross",
+                "parameters": {
+                    "period_short": 10,
+                    "period_long": 50
+                }
+            },
+            {
+                "name": "EMA_Cross",
+                "parameters": {
+                    "period_short": 10,
+                    "period_long": 50
+                }
+            },
+            {
+                "name": "WilliamsR",
+                "parameters": {
+                    "period": 14
+                }
+            }
+        ],
+        "patterns": [
+            "Hammer",
+            "Inverted_Hammer",
+            "Shooting_Star",
+            "Engulfing",
+            "Morning_Star",
+            "Evening_Star",
+            "Piercing_Pattern",
+            "Dark_Cloud_Cover",
+            "Three_White_Soldiers",
+            "Three_Black_Crows"
+        ],
+        "algorithms": [
+            "Levels",
+            "Market_Structure",
+            "BOS_CHoCH",
+            "Liquidity_Sweep",
+            "Order_Blocks",
+            "Fair_Value_Gaps"
+        ],
+        "indicators_custom": [
+            {
+                "name": "SMA",
+                "parameters": {
+                    "period": 15
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,70 @@
+{
+    "name": "MACD + RSI Combo",
+    "goal": "Buy on MACD bullish cross and oversold RSI; sell on bearish cross or overbought RSI.",
+    "entry_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "MACD",
+                    [
+                        12,
+                        26,
+                        9
+                    ]
+                ],
+                "source_2": [
+                    "MACD_Signal",
+                    [
+                        12,
+                        26,
+                        9
+                    ]
+                ],
+                "direction": "above"
+            }
+        },
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "RSI_14",
+                "threshold": 30,
+                "operator": "<"
+            }
+        }
+    ],
+    "exit_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "MACD",
+                    [
+                        12,
+                        26,
+                        9
+                    ]
+                ],
+                "source_2": [
+                    "MACD_Signal",
+                    [
+                        12,
+                        26,
+                        9
+                    ]
+                ],
+                "direction": "below"
+            }
+        },
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "RSI_14",
+                "threshold": 70,
+                "operator": ">"
+            }
+        }
+    ],
+    "filters": [],
+    "risk_params": {}
+}

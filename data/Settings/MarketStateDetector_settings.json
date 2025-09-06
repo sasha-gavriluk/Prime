@@ -1,0 +1,21 @@
+{
+    "MarketStateDetector": {
+        "states": [
+            {
+                "name": "trend",
+                "params": {
+                    "adx_period": 14,
+                    "adx_threshold": 25,
+                    "adx_strong_threshold": 60
+                }
+            },
+            {
+                "name": "range",
+                "params": {
+                    "adx_period": 14,
+                    "adx_threshold": 20
+                }
+            }
+        ]
+    }
+}

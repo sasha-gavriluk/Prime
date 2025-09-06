@@ -1,0 +1,7 @@
+ema        | on | window=12,column=close
+ema        | on | window=26,column=close
+atr        | on | window=14
+roc_norm   | on | window=12,column=close,normalize_by=atr,atr_window=14
+bb_pos     | on | window=20,std_mult=2,column=close
+zscore     | on | window=32,column=close,clip=4
+pct_rank   | on | window=100,column=close

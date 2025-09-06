@@ -1,0 +1,68 @@
+{
+    "keywords": {
+        "assets": [
+            "Bitcoin",
+            "BTC",
+            "Ethereum",
+            "ETH",
+            "Ripple",
+            "XRP",
+            "Cardano",
+            "ADA",
+            "Solana",
+            "SOL",
+            "Dogecoin",
+            "DOGE"
+        ],
+        "exchanges": [
+            "Binance",
+            "Coinbase",
+            "Bybit",
+            "Kraken",
+            "FTX",
+            "KuCoin",
+            "OKX"
+        ],
+        "regulators": [
+            "SEC",
+            "CFTC",
+            "FinCEN",
+            "FCA",
+            "ESMA",
+            "FATF",
+            "MiCA"
+        ],
+        "events_positive": [
+            "partnership",
+            "launches",
+            "listing",
+            "listed",
+            "upgrade",
+            "bullish",
+            "approval",
+            "approved",
+            "integrate",
+            "adopt"
+        ],
+        "events_negative": [
+            "hack",
+            "exploit",
+            "scam",
+            "lawsuit",
+            "investigation",
+            "ban",
+            "delist",
+            "bearish",
+            "fine",
+            "vulnerability",
+            "outage"
+        ]
+    },
+    "impact_multipliers": {
+        "assets": 1.2,
+        "exchanges": 1.1,
+        "regulators": 1.5,
+        "events_positive": 1.3,
+        "events_negative": 1.4
+    }
+}

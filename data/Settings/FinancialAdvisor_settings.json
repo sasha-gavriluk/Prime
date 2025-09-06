@@ -1,0 +1,11 @@
+{
+    "total_capital": 1000.0,
+    "default_risk_per_trade_pct": 0.5,
+    "leverage": 50,
+    "trade_mode": "futures",
+    "risk_reward_ratio": 3.0,
+    "atr_multiplier": 2.0,
+    "default_stop_loss_pct": 2.0,
+    "capital_management_mode": "auto",
+    "manual_total_capital": 1000.0
+}

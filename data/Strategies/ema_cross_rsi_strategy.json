@@ -1,0 +1,63 @@
+{
+    "name": "EMA Cross with RSI filter",
+    "goal": "",
+    "timeframe_id": "30m",
+    "required_indicators": [
+        {"name": "EMA", "parameters": {"period": 10}},
+        {"name": "EMA", "parameters": {"period": 30}},
+        {"name": "RSI", "parameters": {"period": 14}}
+    ],
+    "entry_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "EMA",
+                    [
+                        10
+                    ]
+                ],
+                "source_2": [
+                    "EMA",
+                    [
+                        30
+                    ]
+                ],
+                "direction": "above"
+            }
+        }
+    ],
+    "exit_conditions": [
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "RSI_14",
+                "threshold": 75,
+                "operator": ">"
+            }
+        },
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "EMA",
+                    [
+                        10
+                    ]
+                ],
+                "source_2": [
+                    "EMA",
+                    [
+                        30
+                    ]
+                ],
+                "direction": "below"
+            }
+        }
+    ],
+    "filters": [],
+    "risk_params": {
+        "stop_loss": 0.02,
+        "take_profit": 0.04
+    }
+}

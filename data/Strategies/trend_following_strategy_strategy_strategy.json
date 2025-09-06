@@ -1,0 +1,62 @@
+{
+    "name": "Trend Following EMA",
+    "goal": "Ride the prevailing trend using EMA crossover confirmed by ADX strength.",
+    "entry_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "EMA",
+                    [
+                        50
+                    ]
+                ],
+                "source_2": [
+                    "EMA",
+                    [
+                        200
+                    ]
+                ],
+                "direction": "above"
+            }
+        },
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "ADX_14",
+                "threshold": 25,
+                "operator": ">"
+            }
+        }
+    ],
+    "exit_conditions": [
+        {
+            "type": "Crossover",
+            "params": {
+                "source_1": [
+                    "EMA",
+                    [
+                        50
+                    ]
+                ],
+                "source_2": [
+                    "EMA",
+                    [
+                        200
+                    ]
+                ],
+                "direction": "below"
+            }
+        },
+        {
+            "type": "Threshold",
+            "params": {
+                "source": "ADX_14",
+                "threshold": 20,
+                "operator": "<"
+            }
+        }
+    ],
+    "filters": [],
+    "risk_params": {}
+}

@@ -1,0 +1,34 @@
+# --- Графічний інтерфейс (GUI) ---
+kivy==2.2.1
+# Додаткові залежності Kivy для кращої сумісності
+# kivy-deps.sdl2==0.6.0
+#kivy-deps.gstreamer==0.4.0
+# pypiwin32==223; sys_platform == 'win32'
+
+# --- Аналіз даних та обчислення ---
+pandas==2.2.2
+numpy==1.26.4
+scipy==1.13.1
+
+# --- Взаємодія з біржами ---
+ccxt==4.3.43
+
+# --- Нейромережа та Reinforcement Learning ---
+torch==2.3.1
+gymnasium==0.29.1
+stable-baselines3==2.3.2
+
+# --- Збір та аналіз новин ---
+aiohttp==3.9.5
+feedparser==6.0.11
+vaderSentiment==3.3.2
+
+# --- Візуалізація та графіки ---
+matplotlib==3.9.0
+
+# Візуалізація навчання
+tensorboard==2.16.2 
+
+#Потрібно дописати 
+
+#questionary==1.10.0
