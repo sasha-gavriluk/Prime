@@ -130,5 +130,19 @@ STYLES = {
 
     "deactivated_value_table_balances": {
         "color": "#6B3030"
+    },
+
+    "BUY_history_style":{
+        "color": "#60C700"
+    },
+
+    "SELL_history_style": {
+        "color": "#9C0909"
+    },
+
+    "btn_analysis": {
+        **_BTN_BASE,
+        "background": "#302542DF",
+        "hover-background": "#3C2053"
     }
 }

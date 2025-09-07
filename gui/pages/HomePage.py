@@ -1,15 +1,103 @@
 # pages/home_blocks.py
 import threading
+from datetime import datetime, timezone
 
 from kivy.clock import Clock
+
+from utils.common.SettingsLoader import DecisionSettingsManager, FinancialSettingsManager, SettingsLoader
+
+class SignalConfigLoader:
+    def __init__(self, gui_loader: SettingsLoader):
+        self.gui_loader = gui_loader
+        self.decision_settings = DecisionSettingsManager()
+        self.financial_settings = FinancialSettingsManager()
+        self.pairs, self.active_timeframes = [], []
+        self.metric_weights, self.timeframe_weights = {}, {}
+        self.strategy_configs, self.agent_configs = {}, {}
+        self.user_financial_settings = {}
+
+    def load_all(self):
+        self.gui_loader.reload()
+        self.pairs = self.gui_loader.get_nested_setting(['user_selections', 'selected_pairs'], [])
+        self.active_timeframes = self.gui_loader.get_nested_setting(['user_selections', 'selected_timeframes'], [])
+        self._load_weights()
+        self._load_strategies()
+        self._load_agent_configs()
+        self._load_financials()
+
+    def _extract_weight(self, raw):
+        if isinstance(raw, (int, float)): return float(raw)
+        if isinstance(raw, dict) and 'weight' in raw:
+            try: return float(raw['weight'])
+            except (ValueError, TypeError): pass
+        return 1.0
+
+    def _load_weights(self):
+        raw_metrics = self.gui_loader.get_nested_setting(['user_selections', 'selected_metric_weights'], {})
+        raw_tfs = self.gui_loader.get_nested_setting(['user_selections', 'selected_timeframe_weights'], {})
+        self.metric_weights = {m: self._extract_weight(w) for m, w in raw_metrics.items()}
+        self.timeframe_weights = {tf: self._extract_weight(w) for tf, w in raw_tfs.items()}
+
+    def _load_strategies(self):
+        self.strategy_configs = self.gui_loader.get_nested_setting(['user_selections', 'selected_strategies'], {})
+
+    def _load_agent_configs(self):
+        gui_configs = self.gui_loader.get_nested_setting(['user_selections', 'tf_configurations'], {})
+        default_config = self.decision_settings.get_agent_configurations().get("default", {})
+        fast_config = self.decision_settings.get_agent_configurations().get("fast", default_config)
+        self.agent_configs = {"gui": gui_configs, "default": default_config, "fast": fast_config}
+
+    def _load_financials(self):
+        defaults = self.financial_settings.get_financial_settings()
+        settings = self.gui_loader.get_nested_setting(['user_selections', 'financial_settings'], defaults)
+        for key, value in defaults.items():
+            settings.setdefault(key, value)
+        settings["open_trades"] = []
+        self.user_financial_settings = settings
+
+    def apply_nn_settings(self, nn_settings: dict):
+        """Apply neural-network generated parameters to current config."""
+        if not nn_settings:
+            return
+        changes = []
+
+        # Update financial settings
+        for key in ("default_risk_per_trade_pct", "risk_reward_ratio", "leverage"):
+            if key in nn_settings:
+                old_val = self.user_financial_settings.get(key)
+                self.user_financial_settings[key] = nn_settings[key]
+                changes.append(f"{key}: {old_val} -> {nn_settings[key]}")
+
+        # Update metric weights if provided
+        for key in ("smc_confidence", "pattern_score", "state_strength"):
+            if key in nn_settings:
+                old_val = self.metric_weights.get(key)
+                self.metric_weights[key] = nn_settings[key]
+                changes.append(f"{key}: {old_val} -> {nn_settings[key]}")
+
+        # Update timeframe weights mapping
+        tf_map = {"5m": "tf_5m", "1h": "tf_1h", "4h": "tf_4h"}
+        for tf, nn_key in tf_map.items():
+            if nn_key in nn_settings:
+                old_val = self.timeframe_weights.get(tf)
+                self.timeframe_weights[tf] = nn_settings[nn_key]
+                changes.append(f"{tf}: {old_val} -> {nn_settings[nn_key]}")
+
+        if changes:
+            print("[NN] Applied settings:")
+            for change in changes:
+                print(f"  - {change}")
+        else:
+            print("[NN] Model produced no applicable settings")
 
 class HomePage:
    TEXT_CONNECTION = "Підключено"
    TEXT_DISCONNECTED = "Відключено"
 
-   def __init__(self, ui, connection_controller, fms):
+   def __init__(self, ui, connection_controller, fms, history_db):
       self.ui = ui
       self.fms = fms
+      self.history_db = history_db
 
       self.cc = connection_controller
       self.exchanges = ["Binance", "Bybit"]
@@ -42,10 +130,6 @@ class HomePage:
       self.ui.add("balances_value", "Label", parent="grid_block_balances", text="Баланс".upper(), halign="center", valign="middle", style_class="name_table_balances")
       self.ui.add("balances_open_orders", "Label", parent="grid_block_balances", text="Відкриті ордери".upper(), halign="center", valign="middle", style_class="name_table_balances")
 
-      # +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++
-      # +++++++ +++++++ +++++++ +++++++  ПОТРІБНО ДЛЯ ЦЬОГО БЛОКУ ДОБАВИТИ СКРОЛ ЯК І НАЛАШТУВАННЯХ +++++++ +++++++ +++++++ +++++++ +++
-      # +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ 
-
       for exchange_balance in self.exchanges:
          self.create_exchange_balance_block(exchange_balance)
 
@@ -54,15 +138,24 @@ class HomePage:
       # ================ БЛОК 3 ====================
       self.ui.add("block_l3", "BoxLayout", parent="left_col", style_class="block", orientation="vertical", size_hint=(1, 1))
 
-      scroll_history = self.ui.add("scroll_history", "ScrollView", parent="block_l3", do_scroll_y=True, do_scroll_x=False, size_hint=(1, 1))
-      self.ui.set_size("scroll_history", size_hint=(1, 1))
+      # 1. СТВОРЮЄМО ЗАГОЛОВОК ТАБЛИЦІ ІСТОРІЇ (поза скролом)
+      self.ui.add("history_header", "GridLayout", parent="block_l3", cols=4, spacing=10, size_hint=(1, None), height=40)
       
-      # GridLayout для контенту історії, який будемо заповнювати динамічно
-      grid_history = self.ui.add("history_grid_content","GridLayout", parent="scroll_history", cols=1, spacing=10, size_hint_y=None)
-      self.ui.set_size("settings_list", height=0)
+      # Додаємо назви колонок
+      self.ui.add("history_symbol", "Label", "history_header", text="Символ", style_class="name_table_balances", size_hint_x=0.25)
+      self.ui.add("history_type", "Label", "history_header", text="Тип", style_class="name_table_balances", size_hint_x=0.15)
+      self.ui.add("history_amount", "Label", "history_header", text="Кількість", style_class="name_table_balances", size_hint_x=0.15)
+      self.ui.add("history_time", "Label", "history_header", text="Час", style_class="name_table_balances", size_hint_x=0.35)
 
-      Clock.schedule_once(lambda dt:
-         self.ui.registry["history_grid_content"].bind(minimum_height=self.ui.registry["history_grid_content"].setter("height")), 0)
+      self.ui.add("scroll_history", "ScrollView", parent="block_l3", do_scroll_y=True, do_scroll_x=False, size_hint=(1, 1))
+      self.ui.set_size("scroll_history", size_hint=(1, 1))
+      self.ui.add("history_grid_content","GridLayout", parent="scroll_history", cols=1, spacing=12, padding=(12, 12, 12, 12), size_hint_y=None)
+      self.ui.set_size("history_grid_content", height=0)
+      Clock.schedule_once(lambda dt:self.ui.registry["history_grid_content"].bind(minimum_height=self.ui.registry["history_grid_content"].setter("height")), 0)
+      
+      # +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++
+      # +++++++ +++++++ +++++++ +++++++  ПОТРІБНО ДЛЯ ЦЬОГО БЛОКУ ДОБАВИТИ СКРОЛ ЯК І НАЛАШТУВАННЯХ +++++++ +++++++ +++++++ +++++++ +++
+      # +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ +++++++ 
 
       # ============================================
       # =================================================================================================================
@@ -70,7 +163,14 @@ class HomePage:
       # ================================================ ПРАВИЙ СТОВПЕЦЬ ================================================
       # ================ БЛОК 4 ====================
       self.ui.add("block_right", "BoxLayout", parent=ID_WIDGETS_BLOCKS,style_class="block", orientation="vertical", size_hint=(0.4, 1))
-      self.ui.add("block_right_title", "Label", parent="block_right",text="Правий блок", halign="center", valign="middle")
+      self.ui.add("analysis", "Button", parent="block_right", text="Аналіз", size_hint=(1, 0.1), style_class="btn_analysis")
+      
+      self.ui.add("view_block", "BoxLayout", parent="block_right", orientation="vertical", size_hint=(1, 0.9))
+      self.ui.add("scroll_view", "ScrollView", parent="view_block", do_scroll_y=True, do_scroll_x=False, size_hint=(1, 1))
+      self.ui.set_size("scroll_view", size_hint=(1, 1))
+      self.ui.add("view_grid_content","GridLayout", parent="view_block", cols=1, spacing=12, size_hint_y=None)
+      self.ui.set_size("view_grid_content", height=0)
+      Clock.schedule_once(lambda dt:self.ui.registry["view_grid_content"].bind(minimum_height=self.ui.registry["view_grid_content"].setter("height")), 0)
       # ============================================
       # =================================================================================================================
 
@@ -85,6 +185,7 @@ class HomePage:
             success = self.cc.connect(exchange_name)
             Clock.schedule_once(lambda dt: self.update_status(exchange_name, success))
 
+      self.blocked_button(exchange_name)
       threading.Thread(target=worker).start()
 
    def disconnect_exchange(self, exchange_name):
@@ -93,6 +194,8 @@ class HomePage:
          self.cc.disconnect(exchange_name)
          # Оновлюємо статус у головному потоці Kivy
          Clock.schedule_once(lambda dt: self.update_status(exchange_name, False))
+      
+      self.unblocked_button()
       threading.Thread(target=worker).start()
 
    def toggle_connection(self, exchange_name):
@@ -137,7 +240,7 @@ class HomePage:
       # ====================================================================
 
       # ================ Блок відкритих ордерів ============================
-      self.ui.add(f"label_open_orders_{exchange_balance}", "Label", parent=f"grid_block_balance_{exchange_balance}", text=f"5", style_class="deactivated_value_table_balances")
+      self.ui.add(f"label_open_orders_{exchange_balance}", "Label", parent=f"grid_block_balance_{exchange_balance}", text=f"0", style_class="deactivated_value_table_balances")
       # ====================================================================
 
    def get_balance_all_exchanges(self, exchange):
@@ -225,6 +328,18 @@ class HomePage:
          if style:
             self.ui.style_manager.decorate(item, style)
 
+   def blocked_button(self, exchange_name):
+      for exchange in self.exchanges:
+         if not exchange == exchange_name:
+            self.ui.registry["grid_"+exchange].disabled = True
+
+   def unblocked_button(self):
+      for exchange in self.exchanges:
+         self.ui.registry["grid_"+exchange].disabled = False
+
+      parent_grid = self.ui.registry.get("history_grid_content")
+      parent_grid.clear_widgets()
+
    # ==========================================================================================
 
    # ========================================= Блок 3 =========================================
@@ -241,6 +356,7 @@ class HomePage:
          history = self.cc.get_trade_history_for_last_month(exchange, symbols=symbols, total_limit=10)
          # Передаємо дані в головний потік для оновлення UI
          Clock.schedule_once(lambda dt: self.update_history_trades_block(exchange, history))
+         Clock.schedule_once(lambda dt: self.get_parse_json_trade(history))
       
       threading.Thread(target=worker, daemon=True).start()
 
@@ -266,7 +382,7 @@ class HomePage:
 
       # Динамічно створюємо і додаємо кожен рядок з даними
       for trade in trades_history:
-         row = self.ui.dynamic.create("GridLayout", cols=4, spacing=10, size_hint_y=None, height=40)
+         row = self.ui.dynamic.create("GridLayout", cols=4, spacing=10, size_hint=(1, None), height=40)
          
          symbol = trade.get('symbol', 'N/A')
          side = trade.get('side', 'N/A').upper()
@@ -275,16 +391,140 @@ class HomePage:
          # Форматуємо час
          timestamp = trade.get('timestamp')
          if timestamp:
-             trade_time = Clock.get_boottime() # Використовуємо Kivy Clock для часу
+             # Біржі зазвичай надають час у мілісекундах, тому ділимо на 1000
+             dt_object = datetime.fromtimestamp(timestamp / 1000)
+             # Форматуємо час у зручний вигляд (Рік-Місяць-День Година:Хвилина:Секунда)
+             trade_time = dt_object.strftime("%Y-%m-%d %H:%M:%S")
          else:
              trade_time = "N/A"
 
-         row.add_widget(self.ui.dynamic.create("Label", text=symbol, style_class="active_value_table_balances"))
-         row.add_widget(self.ui.dynamic.create("Label", text=side, style_class="active_value_table_balances", color=(0.2, 0.8, 0.2, 1) if side == 'BUY' else (0.8, 0.2, 0.2, 1)))
-         row.add_widget(self.ui.dynamic.create("Label", text=amount, style_class="active_value_table_balances"))
-         row.add_widget(self.ui.dynamic.create("Label", text=str(trade_time), style_class="deactivated_value_table_balances"))
+         row.add_widget(self.ui.dynamic.create("Label", text=symbol, style_class="BUY_history_style" if side == "BUY" else "SELL_history_style", size_hint_x=0.25))
+         row.add_widget(self.ui.dynamic.create("Label", text=side, style_class="BUY_history_style" if side == "BUY" else "SELL_history_style", size_hint_x=0.15))
+         row.add_widget(self.ui.dynamic.create("Label", text=amount, style_class="BUY_history_style" if side == "BUY" else "SELL_history_style", size_hint_x=0.15))
+         row.add_widget(self.ui.dynamic.create("Label", text=str(trade_time), style_class="BUY_history_style" if side == "BUY" else "SELL_history_style", size_hint_x=0.35))
          
          parent_grid.add_widget(row)
 
+   from datetime import datetime, timezone
+
+   def get_parse_json_trade(self, trades):
+      """
+      trades: iterable з елементами формату ccxt trade:
+         {
+         'id': '...',
+         'info': {  # сирий Bybit execution (result.list[] item)
+            'symbol': 'ETHUSDT', 'orderId': '...', 'execId': '...', 'execTime': '1755...',
+            'execPrice': '...', 'execQty': '...', 'execValue': '...', 'feeRate': '...',
+            'execFee': '...', 'side': 'Sell', 'createType': 'CreateByClosing', ...
+         },
+         'timestamp': 1755..., 'symbol': 'ETH/USDT:USDT', 'side': 'sell',
+         'price': 4739.29, 'amount': 0.03, 'cost': 142.1787, 'fee': {'currency':'USDT','cost':0.1421787,'rate':0.001}
+         }
+      """
+      def _to_float(x):
+         try:
+               return float(x) if x not in (None, "") else None
+         except Exception:
+               return None
+
+      def _ms_to_dt(ms):
+         if ms is None:
+               return None
+         try:
+               ms = int(ms)
+               # якщо це секунди — конвертуємо як s; якщо мс — як ms
+               if ms > 10_000_000_000:
+                  return datetime.fromtimestamp(ms / 1000.0, tz=timezone.utc)
+               return datetime.fromtimestamp(ms, tz=timezone.utc)
+         except Exception:
+               return None
+
+      def _norm_symbol(s):
+         # "ETH/USDT:USDT" -> "ETHUSDT"
+         if not s:
+               return None
+         return s.split(":")[0].replace("/", "")
+
+      closing_types = {"CreateByClosing", "CreateByTakeProfit", "CreateByStopLoss"}
+
+      for item in trades or []:
+         try:
+               info = (item.get("info") or {})
+               # 1) Зберегти fill у executions (дедуп по exec_id вже в HistoryDB.save_execution)
+               self.history_db.save_execution(info, category=None)
+
+               # 2) Зібрати дані для trades (upsert по exchange_order_id = orderId)
+               order_id = info.get("orderId") or item.get("order")
+               if not order_id:
+                  # без order_id не робимо upsert — пропускаємо трейс, але fill вже збережений
+                  continue
+
+               # джерела даних з пріоритетом: info[...] (bybit) -> ccxt top-level
+               symbol = info.get("symbol") or _norm_symbol(item.get("symbol"))
+               side_raw = (info.get("side") or item.get("side") or "").strip().lower()
+               side = "Buy" if side_raw == "buy" else ("Sell" if side_raw == "sell" else None)
+
+               ts = info.get("execTime") or item.get("timestamp")
+               dt = _ms_to_dt(ts)
+
+               price = _to_float(info.get("execPrice")) or _to_float(item.get("price"))
+               qty   = _to_float(info.get("execQty")) or _to_float(info.get("orderQty")) or _to_float(item.get("amount"))
+               value = _to_float(info.get("execValue")) or _to_float(item.get("cost"))
+               fee   = _to_float(info.get("execFee")) or _to_float((item.get("fee") or {}).get("cost"))
+               exec_id = info.get("execId")
+
+               create_type = (info.get("createType") or "").strip()
+
+               trade_data = {
+                  "exchange": "bybit",
+                  "account": getattr(self, "account", "main"),
+                  "symbol": symbol,
+                  "side": side,
+                  "exchange_order_id": order_id,
+               }
+
+               # якщо це "закриття" або тейк/стоп — заповнюємо exit_*,
+               # інакше — вхід (entry_*)
+               if create_type in closing_types:
+                  trade_data.update({
+                     "status": "closed",            # якщо у тебе бувають часткові виходи й хочеш не закривати повністю — поміняй на "open"
+                     "exit_time": dt,
+                     "exit_price": price,
+                     "exit_qty": qty,
+                     "exit_value": value,
+                     "exit_fee": fee,
+                     "exit_exec_ids": [exec_id] if exec_id else None,
+                  })
+               else:
+                  trade_data.update({
+                     "status": "open",
+                     "entry_time": dt,
+                     "entry_price": price,
+                     "entry_qty": qty,
+                     "entry_value": value,
+                     "entry_fee": fee,
+                     "entry_exec_ids": [exec_id] if exec_id else None,
+                     "size": qty,
+                     # за замовчуванням напрям: buy -> long, sell -> short
+                     "direction": "long" if side == "Buy" else ("short" if side == "Sell" else None),
+                  })
+
+               # прибрати None-значення, щоб не засмічувати апдейт
+               trade_data = {k: v for k, v in trade_data.items() if v is not None}
+
+               # 3) upsert у trades по orderId (exchange_order_id)
+               self.history_db.record_trade(
+                  trade_data=trade_data,
+                  settings_data=None,
+                  upsert_on="exchange_order_id"
+               )
+
+         except Exception as e:
+               # лог, але цикл не падає
+               print(f"[parse_trade] order_id={info.get('orderId') or item.get('order')} error: {e}")
 
    # ==========================================================================================
+
+   # ================================= Блок 4 =================================================
+
+   

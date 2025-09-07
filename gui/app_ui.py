@@ -5,12 +5,14 @@ from kivy.clock import Clock
 
 from utils.connectors.ConnectionController import ConnectionController
 from utils.common.FileStructureManager import FileStructureManager
+from utils.common.HistoryDB import HistoryDB
 
 from gui.pages.HomePage import HomePage
 from gui.pages.settings_page import add_settings_blocks
 
 
 fms = FileStructureManager()
+history_db = HistoryDB()
 
 try:
     from gui.UIManager import UIManager
@@ -23,7 +25,8 @@ TOPBAR_H = 50
 def build_root():
     ui = UIManager(canvas_size=Window.size)
     сс = ConnectionController()
-    home_page = HomePage(ui, сс, fms)
+    home_page = HomePage(ui, сс, fms, history_db)
+    
 
     ui.style_manager.load_styles_file(fms.get_path("gui_Style.py"))
     ui.style_manager.set_window_background("#0c1014")
