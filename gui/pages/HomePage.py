@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from kivy.clock import Clock
 
 from utils.common.SettingsLoader import DecisionSettingsManager, FinancialSettingsManager, SettingsLoader
+from utils.analysis.DecisionOrchestrator import DecisionOrchestrator
+from utils.analysis.TimeframeAgent import TimeframeAgent 
 
 class SignalConfigLoader:
     def __init__(self, gui_loader: SettingsLoader):
@@ -89,6 +91,25 @@ class SignalConfigLoader:
                 print(f"  - {change}")
         else:
             print("[NN] Model produced no applicable settings")
+
+class SignalProcessor:
+    def __init__(self, config: SignalConfigLoader):
+        self.config = config
+
+    def generate(self, exchange: str, pair: str, raw_data_by_tf: dict, processed_data_by_tf: dict):
+        timeframe_agents = []
+        for tf, df in processed_data_by_tf.items():
+            agent_config = self.config.agent_configs["gui"].get(tf, self.config.agent_configs["default"])
+            timeframe_agents.append(TimeframeAgent(tf, df, agent_config))
+        if not timeframe_agents:
+            raise ValueError(f"Немає даних для аналізу по парі {pair} на біржі {exchange}.")
+        orchestrator = DecisionOrchestrator(
+            timeframe_agents=timeframe_agents, raw_data_by_tf=raw_data_by_tf,
+            timeframe_weights=self.config.timeframe_weights, metric_weights=self.config.metric_weights,
+            strategy_configs=self.config.strategy_configs, user_financial_settings=self.config.user_financial_settings,
+            trade_mode=self.config.user_financial_settings.get('trade_mode', 'futures'), enable_news=False
+        )
+        return orchestrator.run()
 
 class HomePage:
    TEXT_CONNECTION = "Підключено"
@@ -526,5 +547,5 @@ class HomePage:
    # ==========================================================================================
 
    # ================================= Блок 4 =================================================
-
+   
    

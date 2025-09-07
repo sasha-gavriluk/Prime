@@ -1,7 +1,6 @@
 # utils/common/Database.py
 
 import os
-import shutil
 import duckdb
 import pandas as pd
 from typing import Dict, List, Any
@@ -72,27 +71,30 @@ class DatabaseManager:
     def create_table(self, table_name: str, columns: Dict[str, str], unique_columns: List[str] = None):
         """
         Створює таблицю, якщо вона не існує.
-
-        :param table_name: Назва таблиці.
-        :param columns: Словник {назва_колонки: тип_даних_duckdb}.
-        :param unique_columns: Список колонок, які мають бути унікальними.
+        Без автоінкрементів (IDENTITY), сумісно з будь-якою версією DuckDB.
         """
+        if not self.conn:
+            raise ConnectionError("Немає активного підключення до бази даних.")
+
+        # якщо вже є — просто вийти
         if self.table_exists(table_name):
             print(f"ℹ️ Таблиця '{table_name}' вже існує.")
             return
 
-        cols_str = ", ".join([f"{name} {dtype}" for name, dtype in columns.items()])
-        
-        # Додаємо PRIMARY KEY, якщо він ще не визначений
-        if 'id' in columns and 'PRIMARY KEY' not in columns['id'].upper():
-             # DuckDB використовує IDENTITY для автоінкременту
-            cols_str = cols_str.replace('id UBIGINT', 'id UBIGINT PRIMARY KEY IDENTITY', 1)
-        
-        unique_sql = f", UNIQUE ({', '.join(unique_columns)})" if unique_columns else ''
-        
-        query = f"CREATE TABLE {table_name} ({cols_str}{unique_sql});"
-        self.execute(query)
+        unique_columns = unique_columns or []
+
+        # формуємо визначення колонок як є, без підмін 'IDENTITY/GENERATED'
+        col_defs = [f"{name} {dtype}" for name, dtype in columns.items()]
+
+        # додаємо унікальні обмеження, якщо треба
+        constraints = []
+        if unique_columns:
+            constraints.append(f"UNIQUE ({', '.join(unique_columns)})")
+
+        sql = f"CREATE TABLE {table_name} ({', '.join(col_defs + constraints)});"
+        self.execute(sql)
         print(f"✅ Таблицю '{table_name}' створено.")
+
 
     def insert_data(self, table_name: str, data: Dict[str, Any]):
         """Вставляє один рядок даних у таблицю."""

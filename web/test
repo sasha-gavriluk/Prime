@@ -1,0 +1,293 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Settings, Play, Newspaper, Cpu, Zap, Power, Server, CheckCircle, XCircle, ChevronRight, Sparkles, Loader } from 'lucide-react';
+
+// --- Компоненти UI ---
+
+const Header = () => (
+    <header className="bg-gray-900 text-white p-4 border-b border-gray-700 flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+            <div className="bg-indigo-500 p-2 rounded-lg">
+                <Zap className="h-6 w-6" />
+            </div>
+            <h1 className="text-xl font-bold">Crypto Intelligence Bot</h1>
+        </div>
+        <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors">
+            <Power className="h-5 w-5" />
+            <span>Start Bot</span>
+        </button>
+    </header>
+);
+
+const ControlPanel = ({ onAction, exchangeStatus, toggleConnection }) => {
+    const actions = [
+        { id: 'load_data', label: '1. Завантажити ринкові дані', icon: Server, action: () => onAction('load_data', 'Завантаження ринкових даних...') },
+        { id: 'load_news', label: '2. ✨ Оновити та звести новини', icon: Newspaper, action: () => onAction('load_news', 'Отримання та аналіз новин за допомогою Gemini...') },
+        { id: 'process_data', label: '3. Проаналізувати дані', icon: Cpu, action: () => onAction('process_data', 'Обробка даних та розрахунок індикаторів...') },
+        { id: 'get_signal', label: '4. Отримати торговий сигнал', icon: Play, action: () => onAction('get_signal', 'Фінальний аналіз та генерація сигналу...') },
+    ];
+
+    return (
+        <aside className="w-80 bg-gray-900 p-4 flex flex-col space-y-6">
+            <div>
+                <h2 className="text-lg font-semibold text-gray-300 mb-4">Панель Керування</h2>
+                <div className="space-y-2">
+                    {actions.map(({ id, label, icon: Icon, action }) => (
+                        <button key={id} onClick={action} className="w-full bg-gray-800 hover:bg-gray-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center space-x-3 transition-colors text-left">
+                            <Icon className={`h-5 w-5 ${id === 'load_news' ? 'text-yellow-400' : 'text-indigo-400'}`} />
+                            <span>{label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="flex-grow"></div>
+            <div>
+                <h2 className="text-lg font-semibold text-gray-300 mb-4">Підключення до бірж</h2>
+                <div className="space-y-3">
+                    {Object.entries(exchangeStatus).map(([name, isConnected]) => (
+                        <div key={name} className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
+                            <div className="flex items-center space-x-3">
+                                {isConnected ? <CheckCircle className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
+                                <span className="font-medium">{name}</span>
+                            </div>
+                            <button onClick={() => toggleConnection(name)} className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${isConnected ? 'bg-red-800 hover:bg-red-700 text-white' : 'bg-green-800 hover:bg-green-700 text-white'}`}>
+                                {isConnected ? 'Відключити' : 'Підключити'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </aside>
+    );
+};
+
+const LogViewer = ({ logs, onExplainSignal }) => {
+    const getStatusColor = (type) => {
+        switch (type) {
+            case 'SUCCESS': return 'text-green-400';
+            case 'ERROR': return 'text-red-400';
+            case 'INFO': return 'text-indigo-400';
+            case 'SIGNAL': return 'text-yellow-400 font-bold';
+            case 'GEMINI': return 'text-purple-400';
+            default: return 'text-gray-400';
+        }
+    };
+    
+    const getStatusIcon = (type) => {
+        switch (type) {
+            case 'SUCCESS': return <CheckCircle className="h-4 w-4" />;
+            case 'ERROR': return <XCircle className="h-4 w-4" />;
+            case 'GEMINI': return <Sparkles className="h-4 w-4" />;
+            case 'LOADING': return <Loader className="h-4 w-4 animate-spin" />;
+            default: return <ChevronRight className="h-4 w-4" />;
+        }
+    };
+
+    return (
+        <main className="flex-1 p-6 bg-gray-900/50">
+            <div className="bg-gray-900 rounded-xl h-full p-4 flex flex-col shadow-2xl shadow-black/50">
+                <h2 className="text-xl font-bold text-white mb-4">Журнал Операцій</h2>
+                <div className="flex-grow overflow-y-auto pr-2">
+                    <div className="space-y-3">
+                        {logs.map((log, index) => (
+                            <div key={index} className="flex items-start space-x-3 text-sm">
+                                <span className="font-mono text-gray-500 mt-0.5">{log.time}</span>
+                                <div className={`flex-shrink-0 mt-0.5 ${getStatusColor(log.type)}`}>
+                                   {getStatusIcon(log.type)}
+                                </div>
+                                <div className="flex-1">
+                                    <p className={`${getStatusColor(log.type)}`}>
+                                        {log.message}
+                                    </p>
+                                    {log.type === 'SIGNAL' && (
+                                        <button onClick={() => onExplainSignal(log.data, index)} className="mt-2 flex items-center space-x-2 text-sm bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md transition-colors">
+                                            <Sparkles className="h-4 w-4" />
+                                            <span>Пояснити сигнал</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </main>
+    );
+};
+
+
+const SettingsModal = ({ isOpen, onClose }) => {
+    if (!isOpen) return null;
+    const [activeTab, setActiveTab] = useState('general');
+    const tabs = { general: "Загальні", analysis: "Аналіз", engine: "Двигун рішень", news: "Новини" };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 backdrop-blur-sm">
+            <div className="bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col border border-gray-700">
+                <header className="p-4 flex justify-between items-center border-b border-gray-700">
+                    <h2 className="text-xl font-bold text-white">Налаштування</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
+                </header>
+                <div className="flex flex-1 overflow-hidden">
+                    <nav className="w-48 border-r border-gray-700 p-4">
+                        <ul className="space-y-2">
+                            {Object.entries(tabs).map(([key, name]) => (
+                                <li key={key}><button onClick={() => setActiveTab(key)} className={`w-full text-left px-3 py-2 rounded-md ${activeTab === key ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800'}`}>{name}</button></li>
+                            ))}
+                        </ul>
+                    </nav>
+                    <main className="flex-1 p-6 overflow-y-auto">
+                        <h3 className="text-2xl font-bold text-white mb-4">{tabs[activeTab]}</h3>
+                        <p className="text-gray-400">Тут будуть відповідні налаштування для секції "{tabs[activeTab]}".</p>
+                    </main>
+                </div>
+                 <footer className="p-4 border-t border-gray-700 flex justify-end space-x-3">
+                    <button onClick={onClose} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Скасувати</button>
+                    <button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Зберегти</button>
+                </footer>
+            </div>
+        </div>
+    );
+};
+
+// --- Головний компонент додатку ---
+
+export default function App() {
+    const [logs, setLogs] = useState([]);
+    const [isSettingsOpen, setSettingsOpen] = useState(false);
+    const [exchangeStatus, setExchangeStatus] = useState({ 'Binance': false, 'Bybit': false });
+
+    const addLog = useCallback((message, type = 'INFO', data = null) => {
+        const time = new Date().toLocaleTimeString('uk-UA');
+        setLogs(prevLogs => [...prevLogs, { time, message, type, data }]);
+    }, []);
+    
+    const updateLog = useCallback((index, message, type) => {
+        setLogs(prevLogs => {
+            const newLogs = [...prevLogs];
+            if(newLogs[index]) {
+                newLogs[index].message = message;
+                newLogs[index].type = type;
+            }
+            return newLogs;
+        });
+    }, []);
+
+    const callGeminiApi = async (prompt) => {
+        const apiKey = ""; // Canvas will provide the key
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: prompt }] }]
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error(`API call failed with status: ${response.status}`);
+            }
+            const result = await response.json();
+            if (result.candidates && result.candidates.length > 0) {
+                return result.candidates[0].content.parts[0].text;
+            }
+            throw new Error("No content received from Gemini.");
+        } catch (error) {
+            console.error("Gemini API call error:", error);
+            throw error;
+        }
+    };
+
+    useEffect(() => {
+        addLog('Бот ініціалізовано. Очікування команд...', 'INFO');
+    }, [addLog]);
+
+    const handleAction = async (actionId, startMessage) => {
+        addLog(startMessage, 'INFO');
+        const loadingLogIndex = logs.length;
+        addLog('Обробка запиту...', 'LOADING');
+
+        try {
+            // Імітація виконання дії
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            switch (actionId) {
+                case 'load_data':
+                    updateLog(loadingLogIndex, '✅ Дані для BTC/USDT, ETH/USDT успішно завантажено.', 'SUCCESS');
+                    break;
+                case 'load_news':
+                    const newsHeadlines = [
+                        "Bitcoin breaks $70,000 as institutional interest surges.",
+                        "Ethereum's Dencun upgrade leads to a 90% reduction in L2 fees.",
+                        "SEC delays decision on spot Ether ETF, citing market manipulation concerns.",
+                        "Binance announces partnership with a major payment provider to expand fiat on-ramps."
+                    ];
+                    const newsPrompt = `Summarize the current market sentiment based on these crypto news headlines. Be concise and state if the overall sentiment is bullish, bearish, or neutral:\n\n- ${newsHeadlines.join('\n- ')}`;
+                    const newsSummary = await callGeminiApi(newsPrompt);
+                    updateLog(loadingLogIndex, `📰 Зібрано ${newsHeadlines.length} новини.`, 'SUCCESS');
+                    addLog(newsSummary, 'GEMINI');
+                    break;
+                case 'process_data':
+                    updateLog(loadingLogIndex, '✅ Розраховано 12 індикаторів та 5 патернів для всіх пар.', 'SUCCESS');
+                    break;
+                case 'get_signal':
+                    const signalData = {
+                        asset: 'BTC/USDT',
+                        direction: 'BUY',
+                        confidence: '78.5%',
+                        reason: 'Пробій рівня опору на H1, підтверджений збільшенням обсягу та позитивним перетином MACD.'
+                    };
+                    updateLog(loadingLogIndex, `Сигнал для ${signalData.asset}: ${signalData.direction}. Впевненість: ${signalData.confidence}.`, 'SIGNAL', signalData);
+                    break;
+                default:
+                    updateLog(loadingLogIndex, `Дію ${actionId} виконано.`, 'SUCCESS');
+            }
+        } catch (error) {
+            updateLog(loadingLogIndex, `Помилка виконання дії: ${error.message}`, 'ERROR');
+        }
+    };
+    
+    const handleExplainSignal = async (signalData, logIndex) => {
+        const loadingIndex = logs.length;
+        addLog('✨ Gemini аналізує сигнал...', 'LOADING');
+        
+        try {
+            const prompt = `Explain this trading signal in a simple, human-readable way for a trader. The signal is: ${signalData.direction} for ${signalData.asset} with ${signalData.confidence} confidence. The primary reason is: "${signalData.reason}". Keep the explanation concise and structured.`;
+            const explanation = await callGeminiApi(prompt);
+            updateLog(loadingIndex, explanation, 'GEMINI');
+        } catch (error) {
+            updateLog(loadingIndex, `Не вдалося отримати пояснення від Gemini: ${error.message}`, 'ERROR');
+        }
+    };
+
+    const toggleConnection = (exchangeName) => {
+        const isConnected = !exchangeStatus[exchangeName];
+        setExchangeStatus(prev => ({ ...prev, [exchangeName]: isConnected }));
+        if (isConnected) {
+            addLog(`🔌 Підключення до ${exchangeName}...`, 'INFO');
+            setTimeout(() => addLog(`✅ Успішно підключено до ${exchangeName}.`, 'SUCCESS'), 1000);
+        } else {
+            addLog(`🔌 Відключено від ${exchangeName}.`, 'INFO');
+        }
+    };
+
+    return (
+        <div className="bg-gray-800 text-gray-100 font-sans h-screen flex flex-col">
+            <Header />
+            <div className="flex flex-1 overflow-hidden">
+                <ControlPanel onAction={handleAction} exchangeStatus={exchangeStatus} toggleConnection={toggleConnection} />
+                <LogViewer logs={logs} onExplainSignal={handleExplainSignal} />
+            </div>
+            <footer className="bg-gray-900 text-white p-2 border-t border-gray-700 flex justify-between items-center text-xs">
+                <span>Статус: Очікування</span>
+                <button onClick={() => setSettingsOpen(true)} className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-md">
+                    <Settings className="h-4 w-4" />
+                    <span>Налаштування</span>
+                </button>
+            </footer>
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+        </div>
+    );
+}

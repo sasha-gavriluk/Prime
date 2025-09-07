@@ -19,6 +19,8 @@ try:
 except ImportError:
     from UIManager import UIManager
 
+Window.size = (1000, 700)
+
 PANEL_W = 250
 TOPBAR_H = 50
 
@@ -26,7 +28,7 @@ def build_root():
     ui = UIManager(canvas_size=Window.size)
     сс = ConnectionController()
     home_page = HomePage(ui, сс, fms, history_db)
-    
+
 
     ui.style_manager.load_styles_file(fms.get_path("gui_Style.py"))
     ui.style_manager.set_window_background("#0c1014")
@@ -85,7 +87,7 @@ def build_root():
         ui.place_absolute("content", 0, 0, width=Window.width, height=Window.height - TOPBAR_H)
 
     _layout()
-    Window.bind(size=lambda *_: _layout())
+    # Window.bind(size=lambda *_: _layout())
 
     # Вміст топбару
     ui.add("menu_btn", "IconButton", parent="topbar", icon_source=fms.get_path("icons_menu.png"), text="Меню", icon_side="left", size_hint=(None, 1), width=100, style_class="btn_menu")
